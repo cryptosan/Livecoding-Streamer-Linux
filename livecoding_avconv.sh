@@ -27,7 +27,7 @@ FILE_VIDEO="my.flv"  # File name
 # Or make a global file named ".livecoding_key" in your home directory (~/.livecoding_key)
 
 # Livecoding Server
-SERVER="live-fra"    # EU server
+SERVER="eumedia1"    # EU server
 
 # Change this to 'true' if you want to go always on FULLSCREEN, this will disable the output.
 ALWAYS_FULLSCREEN=false
