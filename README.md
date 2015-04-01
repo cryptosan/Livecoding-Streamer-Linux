@@ -6,7 +6,6 @@ Thanks wargio :)
 it's a good software !
 
 ## Why did i fork this software?
-================================
 I'm using Linux Mint 17 with Radeon graphic h/w.
 but obsprojects's software didn't work on the OS, exactly, my h/w didn't support OpenGL 3.2+,
 so i have to look for some softwares, and i got this software.
