@@ -3,11 +3,11 @@
 # Copyright (c) 2013-2014, Giovanni Dante Grazioli (deroad)
 
 # ================================================ OPTIONS =====================================================
-# Add the AVCONV ABSOLUTE PATH "/path/to/ffmpeg"
-AVCONV_PATH="avconv"
+# Add the FFMPEG ABSOLUTE PATH "/path/to/ffmpeg"
+FFMPEG_PATH="ffmpeg"
 
 # Streaming Options
-OUTRES="1280x720"     # Twitch Output Resolution
+OUTRES="1280x720"     # Livecoding Output Resolution
 FPS="24"              # Frame per Seconds (Suggested 24, 25, 30 or 60)
 THREADS="4"           # Change this if you have a good CPU (Suggested 4 threads, Max 6 threads)
 QUALITY="ultrafast"   # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
@@ -22,12 +22,16 @@ WEBCAM_XY=""         # WebCam Position (in pixel) example: "10:10", if "" (empty
 FILE_VIDEO="my.flv"  # File name
 
 # STREAM KEY
-# You can find YOUR key here: http://www.twitch.tv/broadcast/ (Show Key button)
-# Save your key inside the twitch_key file
-# Or make a global file named ".twitch_key" in your home directory (~/.twitch_key)
+# You can find YOUR key in your Email from Livecoding.tv
+# Save your key inside the livecoding_key file
+# Or make a global file named ".livecoding_key" in your home directory (~/.livecoding_key)
 
-# Twitch Server list http://bashtech.net/twitch/ingest.php
-SERVER="live-fra"    # EU server
+# Livecoding Server
+SERVER="eumedia1"    # EU server
+
+# These will be used only if the -coords option is called.
+SET_XY="0,0"		# Position of the Window on the screen (X,Y)
+SET_INRES="0x0"		# Window size (WxH)
 
 # Change this to 'true' if you want to go always on FULLSCREEN, this will disable the output.
 ALWAYS_FULLSCREEN=false
@@ -36,9 +40,10 @@ ALWAYS_FULLSCREEN=false
 # This will not affect the ALWAYS_FULLSCREEN option. ALWAYS_FULLSCREEN will always disable the output.
 SUPPRESS_OUTPUT=false
 
-# Twitch says it MUST have a 44100 rate, please do not change it unless you know what you are doing.
+# Livecoding says it MUST have a 44100 rate, please do not change it unless you know what you are doing.
 AUDIO_RATE="44100"
-
+# Livecoding says it MUST be 2, please do not change it unless you know what you are doing.
+KEY_FRAME="2"
 
 # ============================================== END OPTIONS ===================================================
 # The following values are changed automatically, so do not change them
@@ -61,15 +66,15 @@ elif [ -z "$WEBCAM_WH" ]; then
 	WEBCAM="/dev/no-webcam"
 fi
 # Find stream key
-if [ -f ~/.twitch_key ]; then
-    ECHO_LOG=$ECHO_LOG"\nUsing global twitch key located in home directory"
-    STREAM_KEY=$(cat ~/.twitch_key)
+if [ -f ~/.livecoding_key ]; then
+    ECHO_LOG=$ECHO_LOG"\nUsing global livecoding key located in home directory"
+    STREAM_KEY=$(cat ~/.livecoding_key)
 else
-    if [ -f ./twitch_key ]; then
-        ECHO_LOG=$ECHO_LOG"\nUsing twitch key located in current running directory"
-        STREAM_KEY=$(cat ./twitch_key)
+    if [ -f ./livecoding_key ]; then
+        ECHO_LOG=$ECHO_LOG"\nUsing livecoding key located in current running directory"
+        STREAM_KEY=$(cat ./livecoding_key)
     else
-        echo "Could not locate ~/.twitch_key or twitch_key"
+        echo "Could not locate ~/.livecoding_key or livecoding_key"
         exit 1
     fi
 fi
@@ -160,7 +165,7 @@ checkFileExists(){
 
 streamWebcam(){
         echo "Webcam found!!"
-        echo "You should be online! Check on http://twitch.tv/ (Press CTRL+C to stop)"
+        echo "You should be online! Check on http://livecoding.tv/ (Press CTRL+C to stop)"
         echo " "
         if [ -z "$WEBCAM_XY" ]; then
                 # checks to avoid a fail on loading the Webcam
@@ -168,21 +173,21 @@ streamWebcam(){
                 WEBCAM_XY="$(($(echo $INRES | awk -F"x" '{ print $1 }') - $(echo $WEBCAM_WH | awk -F":" '{ print $1 }') - 10)):10"
                 echo "There isn't a WEBCAM_XY in the options, i'll generate the standard one ($WEBCAM_XY)"
         fi
-        $AVCONV_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -g $GOP -keyint_min $GOPMIN -b $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film  -acodec libmp3lame -threads $THREADS -vf "movie=$WEBCAM:f=video4linux2, scale=$WEBCAM_WH , setpts=PTS-STARTPTS [WebCam]; [in] setpts=PTS-STARTPTS [Screen]; [Screen][WebCam] overlay=$WEBCAM_XY [out]" -strict normal -bufsize $CBR $LOGLEVEL_ARG "rtmp://$SERVER.twitch.tv/app/$STREAM_KEY"
+        $FFMPEG_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -force_key_frames "expr:gte(t,n_forced*$KEY_FRAME)" -g $GOP -keyint_min $GOPMIN -b $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film  -acodec libmp3lame -threads $THREADS -vf "movie=$WEBCAM:f=video4linux2, scale=$WEBCAM_WH , setpts=PTS-STARTPTS [WebCam]; [in] setpts=PTS-STARTPTS [Screen]; [Screen][WebCam] overlay=$WEBCAM_XY [out]" -strict normal -bufsize $CBR $LOGLEVEL_ARG "rtmp://$SERVER.livecoding.tv:1935/livecodingtv/$STREAM_KEY"
         APP_RETURN=$?
 }
 
 streamNoWebcam(){
         echo "Webcam NOT found!! ("$WEBCAM")"
-        echo "You should be online! Check on http://twitch.tv/ (Press CTRL+C to stop)"
+        echo "You should be online! Check on http://livecoding.tv/ (Press CTRL+C to stop)"
         echo " "
-        $AVCONV_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -g $GOP -keyint_min $GOPMIN  -b:v $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film -acodec libmp3lame -threads $THREADS -strict normal -bufsize $CBR $LOGLEVEL_ARG "rtmp://$SERVER.twitch.tv/app/$STREAM_KEY"
+        $FFMPEG_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -force_key_frames "expr:gte(t,n_forced*$KEY_FRAME)" -g $GOP -keyint_min $GOPMIN  -b:v $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film -acodec libmp3lame -threads $THREADS -strict normal -bufsize $CBR $LOGLEVEL_ARG "rtmp://$SERVER.livecoding.tv:1935/livecodingtv/$STREAM_KEY"
         APP_RETURN=$?
 }
 
 saveStreamWebcam(){
         echo "Webcam found!!"
-        echo "You should be online! Check on http://twitch.tv/ (Press CTRL+C to stop)"
+        echo "You should be online! Check on http://livecoding.tv/ (Press CTRL+C to stop)"
         echo " "
         if [ -z "$WEBCAM_XY" ]; then
                 # checks to avoid a fail on loading the Webcam
@@ -190,15 +195,15 @@ saveStreamWebcam(){
                 WEBCAM_XY="$(($(echo $INRES | awk -F"x" '{ print $1 }') - $(echo $WEBCAM_WH | awk -F":" '{ print $1 }') - 10)):10"
                 echo "There isn't a WEBCAM_XY in the options, i'll generate the standard one ($WEBCAM_XY)"
         fi
-        $AVCONV_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -g $GOP -keyint_min $GOPMIN -b $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film  -acodec libmp3lame -threads $THREADS -vf "movie=$WEBCAM:f=video4linux2, scale=$WEBCAM_WH , setpts=PTS-STARTPTS [WebCam]; [in] setpts=PTS-STARTPTS [Screen]; [Screen][WebCam] overlay=$WEBCAM_XY [out]" -strict normal -bufsize $CBR $LOGLEVEL_ARG $FILE_VIDEO
+        $FFMPEG_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -force_key_frames "expr:gte(t,n_forced*$KEY_FRAME)" -g $GOP -keyint_min $GOPMIN -b $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film  -acodec libmp3lame -threads $THREADS -vf "movie=$WEBCAM:f=video4linux2, scale=$WEBCAM_WH , setpts=PTS-STARTPTS [WebCam]; [in] setpts=PTS-STARTPTS [Screen]; [Screen][WebCam] overlay=$WEBCAM_XY [out]" -strict normal -bufsize $CBR $LOGLEVEL_ARG $FILE_VIDEO
         APP_RETURN=$?
 }
 
 saveStreamNoWebcam(){
         echo "Webcam NOT found!! ("$WEBCAM")"
-        echo "You should be online! Check on http://twitch.tv/ (Press CTRL+C to stop)"
+        echo "You should be online! Check on http://livecoding.tv/ (Press CTRL+C to stop)"
         echo " "
-        $AVCONV_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -g $GOP -keyint_min $GOPMIN  -b:v $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film -acodec libmp3lame -threads $THREADS -strict normal -bufsize $CBR $LOGLEVEL_ARG $FILE_VIDEO
+        $FFMPEG_PATH -f x11grab -s $INRES -framerate "$FPS" -i :0.0+$TOPXY -f alsa -i pulse -f flv -ac 2 -ar $AUDIO_RATE -vcodec libx264 -force_key_frames "expr:gte(t,n_forced*$KEY_FRAME)" -g $GOP -keyint_min $GOPMIN  -b:v $CBR -minrate $CBR -maxrate $CBR -pix_fmt yuv420p -s $OUTRES -preset $QUALITY -tune film -acodec libmp3lame -threads $THREADS -strict normal -bufsize $CBR $LOGLEVEL_ARG $FILE_VIDEO
         APP_RETURN=$?
 }
 
@@ -246,6 +251,9 @@ showUsage(){
 		echo "      -fullscreen | enable the fullscreen"
 		echo "                    and disable the output"
 		echo "      -window     | enable the window mode"
+		echo "      -coords     | set the screen resolution"
+		echo "                    by using SET_XY SET_INRES"
+		echo "                    defined inside the script"
 		echo "      -save       | save the video to a file"
 		echo "                    instead of streaming it"
 		echo "      -quiet      | disables most of the outputs"
@@ -255,13 +263,9 @@ showUsage(){
 echo " "
 echo "Twitch Streamer for Linux ("$SCRIPT_NAME")"
 echo "Copyright (c) 2013 - 2014, Giovanni Dante Grazioli (deroad)"
-
-echo "This script is DEPRECATED. if it does not work, use the ffmpeg one."
-
 # To be sure to unload everything
 trap "unloadModule; exit" SIGHUP SIGINT SIGTERM
 echo -e $ECHO_LOG
-
 if [ $# -ge 1 ]; then
     for ARG in "$@"
     do
@@ -289,11 +293,22 @@ if [ $# -ge 1 ]; then
 		INRES=$(cat twitch_tmp | awk 'FNR == 12 {print $2}')"x"$(cat twitch_tmp | awk 'FNR == 13 {print $2}')
 		rm -f twitch_tmp 2> /dev/null
 		SCREEN_SETUP=2
+	elif [ $ARG == "-coords" ]; then
+		if [ $SCREEN_SETUP -eq 1 ]; then
+		     continue
+		elif [ "$SET_INRES" != "0x0" ]; then
+			TOPXY=$SET_XY
+			INRES=$SET_INRES
+			echo "[+] Using pre-defined screen coords (X,Y = $TOPXY) (WxH = $INRES)."
+			SCREEN_SETUP=2
+		else
+			echo "[+] Could not use pre-defined screen coords, because 'SET_INRES' equals '0x0'."
+		fi
 	elif [ $ARG == "-save" ]; then
 		if [ ! $STREAM_SAVE -eq 0 ]; then
 		     continue
 		fi
-		echo "[+] Saving the video into $FILE_VIDEO instead of stream to Twitch.tv"
+		echo "[+] Saving the video into $FILE_VIDEO instead of stream to Livecoding.tv"
 		STREAM_SAVE=1
 	elif [ $ARG == "-quiet" ]; then
 		if [ $SUPPRESS_OUTPUT = true ]; then

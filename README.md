@@ -12,5 +12,11 @@ so i have to look for some softwares, and i got this software.
 
 IF YOU CAN'T USE OBJPROJECTS'S PROGRAM, YOU SHOULD USE THIS.
 
+## Usage
+  
+You have to edit `livecoding_key` file.  
+Paste your `streamer key` into `livecoding_key` file.  
+Visit above github address (Twitch-Streamer-Linux), and check command line  
+  
 all license is following wargio of Twitch-Streamer-Linux.  
 Github: (https://github.com/wargio/Twitch-Streamer-Linux)
